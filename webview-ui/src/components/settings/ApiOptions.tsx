@@ -10,7 +10,6 @@ import {
 	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
 	openRouterDefaultModelId,
 	requestyDefaultModelId,
-	glamaDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
 	openAiNativeDefaultModelId,
@@ -76,7 +75,6 @@ import {
 	DeepSeek,
 	Doubao,
 	Gemini,
-	Glama,
 	Groq,
 	HuggingFace,
 	IOIntelligence,
@@ -109,7 +107,6 @@ import { inputEventTransform, noTransform } from "./transforms"
 import { ModelInfoView } from "./ModelInfoView"
 import { ApiErrorMessage } from "./ApiErrorMessage"
 import { ThinkingBudget } from "./ThinkingBudget"
-import { SimpleThinkingBudget } from "./SimpleThinkingBudget"
 import { Verbosity } from "./Verbosity"
 import { DiffSettingsControl } from "./DiffSettingsControl"
 import { TodoListSettingsControl } from "./TodoListSettingsControl"
@@ -307,7 +304,7 @@ const ApiOptions = ({
 
 			// It would be much easier to have a single attribute that stores
 			// the modelId, but we have a separate attribute for each of
-			// OpenRouter, Glama, Unbound, and Requesty.
+			// OpenRouter, Unbound, and Requesty.
 			// If you switch to one of these providers and the corresponding
 			// modelId is not set then you immediately end up in an error state.
 			// To address that we set the modelId to the default value for th
@@ -341,7 +338,6 @@ const ApiOptions = ({
 			> = {
 				deepinfra: { field: "deepInfraModelId", default: deepInfraDefaultModelId },
 				openrouter: { field: "openRouterModelId", default: openRouterDefaultModelId },
-				glama: { field: "glamaModelId", default: glamaDefaultModelId },
 				unbound: { field: "unboundModelId", default: unboundDefaultModelId },
 				requesty: { field: "requestyModelId", default: requestyDefaultModelId },
 				litellm: { field: "litellmModelId", default: litellmDefaultModelId },
@@ -421,11 +417,12 @@ const ApiOptions = ({
 	// Mirrors the simplified logic in resolveToolProtocol.ts:
 	// 1. User preference (toolProtocol) - handled by the select value binding
 	// 2. Model default - use if available
-	// 3. Native fallback
-	const defaultProtocol = selectedModelInfo?.defaultToolProtocol || TOOL_PROTOCOL.NATIVE
+	// 3. XML fallback
+	const defaultProtocol = selectedModelInfo?.defaultToolProtocol || TOOL_PROTOCOL.XML
 
-	// Show the tool protocol selector when model supports native tools
-	const showToolProtocolSelector = selectedModelInfo?.supportsNativeTools === true
+	// Show the tool protocol selector when model supports native tools.
+	// For OpenAI Compatible providers we always show it so users can force XML/native explicitly.
+	const showToolProtocolSelector = selectedProvider === "openai" || selectedModelInfo?.supportsNativeTools === true
 
 	// Convert providers to SearchableSelect options
 	const providerOptions = useMemo(() => {
@@ -528,18 +525,6 @@ const ApiOptions = ({
 					setApiConfigurationField={setApiConfigurationField}
 					routerModels={routerModels}
 					refetchRouterModels={refetchRouterModels}
-					organizationAllowList={organizationAllowList}
-					modelValidationError={modelValidationError}
-					simplifySettings={fromWelcomeView}
-				/>
-			)}
-
-			{selectedProvider === "glama" && (
-				<Glama
-					apiConfiguration={apiConfiguration}
-					setApiConfigurationField={setApiConfigurationField}
-					routerModels={routerModels}
-					uriScheme={uriScheme}
 					organizationAllowList={organizationAllowList}
 					modelValidationError={modelValidationError}
 					simplifySettings={fromWelcomeView}
@@ -855,22 +840,14 @@ const ApiOptions = ({
 				</>
 			)}
 
-			{!fromWelcomeView &&
-				(selectedProvider === "roo" ? (
-					<SimpleThinkingBudget
-						key={`${selectedProvider}-${selectedModelId}`}
-						apiConfiguration={apiConfiguration}
-						setApiConfigurationField={setApiConfigurationField}
-						modelInfo={selectedModelInfo}
-					/>
-				) : (
-					<ThinkingBudget
-						key={`${selectedProvider}-${selectedModelId}`}
-						apiConfiguration={apiConfiguration}
-						setApiConfigurationField={setApiConfigurationField}
-						modelInfo={selectedModelInfo}
-					/>
-				))}
+			{!fromWelcomeView && (
+				<ThinkingBudget
+					key={`${selectedProvider}-${selectedModelId}`}
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					modelInfo={selectedModelInfo}
+				/>
+			)}
 
 			{/* Gate Verbosity UI by capability flag */}
 			{!fromWelcomeView && selectedModelInfo?.supportsVerbosity && (

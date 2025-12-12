@@ -156,7 +156,6 @@ export class NativeToolCallParser {
 					id: tracked.id,
 				})
 			}
-			this.rawChunkTracker.clear()
 		}
 
 		return events
@@ -406,6 +405,7 @@ export class NativeToolCallParser {
 						coordinate: partialArgs.coordinate,
 						size: partialArgs.size,
 						text: partialArgs.text,
+						path: partialArgs.path,
 					}
 				}
 				break
@@ -433,14 +433,6 @@ export class NativeToolCallParser {
 						prompt: partialArgs.prompt,
 						path: partialArgs.path,
 						image: partialArgs.image,
-					}
-				}
-				break
-
-			case "list_code_definition_names":
-				if (partialArgs.path !== undefined) {
-					nativeArgs = {
-						path: partialArgs.path,
 					}
 				}
 				break
@@ -495,6 +487,20 @@ export class NativeToolCallParser {
 				if (partialArgs.patch !== undefined) {
 					nativeArgs = {
 						patch: partialArgs.patch,
+					}
+				}
+				break
+
+			case "search_replace":
+				if (
+					partialArgs.file_path !== undefined ||
+					partialArgs.old_string !== undefined ||
+					partialArgs.new_string !== undefined
+				) {
+					nativeArgs = {
+						file_path: partialArgs.file_path,
+						old_string: partialArgs.old_string,
+						new_string: partialArgs.new_string,
 					}
 				}
 				break
@@ -631,6 +637,7 @@ export class NativeToolCallParser {
 							coordinate: args.coordinate,
 							size: args.size,
 							text: args.text,
+							path: args.path,
 						} as NativeArgsFor<TName>
 					}
 					break
@@ -658,14 +665,6 @@ export class NativeToolCallParser {
 							prompt: args.prompt,
 							path: args.path,
 							image: args.image,
-						} as NativeArgsFor<TName>
-					}
-					break
-
-				case "list_code_definition_names":
-					if (args.path !== undefined) {
-						nativeArgs = {
-							path: args.path,
 						} as NativeArgsFor<TName>
 					}
 					break
@@ -738,6 +737,20 @@ export class NativeToolCallParser {
 					if (args.patch !== undefined) {
 						nativeArgs = {
 							patch: args.patch,
+						} as NativeArgsFor<TName>
+					}
+					break
+
+				case "search_replace":
+					if (
+						args.file_path !== undefined &&
+						args.old_string !== undefined &&
+						args.new_string !== undefined
+					) {
+						nativeArgs = {
+							file_path: args.file_path,
+							old_string: args.old_string,
+							new_string: args.new_string,
 						} as NativeArgsFor<TName>
 					}
 					break

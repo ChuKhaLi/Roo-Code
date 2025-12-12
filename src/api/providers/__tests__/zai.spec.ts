@@ -1,8 +1,5 @@
 // npx vitest run src/api/providers/__tests__/zai.spec.ts
 
-// Mock vscode first to avoid import errors
-vitest.mock("vscode", () => ({}))
-
 import OpenAI from "openai"
 import { Anthropic } from "@anthropic-ai/sdk"
 
@@ -163,6 +160,84 @@ describe("ZAiHandler", () => {
 			expect(model.info.supportsImages).toBe(true)
 			expect(model.info.maxTokens).toBe(16_384)
 			expect(model.info.contextWindow).toBe(131_072)
+		})
+	})
+
+	describe("International API", () => {
+		beforeEach(() => {
+			handler = new ZAiHandler({ zaiApiKey: "test-zai-api-key", zaiApiLine: "international_api" })
+		})
+
+		it("should use the correct international API base URL", () => {
+			new ZAiHandler({ zaiApiKey: "test-zai-api-key", zaiApiLine: "international_api" })
+			expect(OpenAI).toHaveBeenCalledWith(
+				expect.objectContaining({
+					baseURL: "https://api.z.ai/api/paas/v4",
+				}),
+			)
+		})
+
+		it("should use the provided API key for international API", () => {
+			const zaiApiKey = "test-zai-api-key"
+			new ZAiHandler({ zaiApiKey, zaiApiLine: "international_api" })
+			expect(OpenAI).toHaveBeenCalledWith(expect.objectContaining({ apiKey: zaiApiKey }))
+		})
+
+		it("should return international default model when no model is specified", () => {
+			const model = handler.getModel()
+			expect(model.id).toBe(internationalZAiDefaultModelId)
+			expect(model.info).toEqual(internationalZAiModels[internationalZAiDefaultModelId])
+		})
+
+		it("should return specified international model when valid model is provided", () => {
+			const testModelId: InternationalZAiModelId = "glm-4.5-air"
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: testModelId,
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international_api",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(internationalZAiModels[testModelId])
+		})
+	})
+
+	describe("China API", () => {
+		beforeEach(() => {
+			handler = new ZAiHandler({ zaiApiKey: "test-zai-api-key", zaiApiLine: "china_api" })
+		})
+
+		it("should use the correct China API base URL", () => {
+			new ZAiHandler({ zaiApiKey: "test-zai-api-key", zaiApiLine: "china_api" })
+			expect(OpenAI).toHaveBeenCalledWith(
+				expect.objectContaining({
+					baseURL: "https://open.bigmodel.cn/api/paas/v4",
+				}),
+			)
+		})
+
+		it("should use the provided API key for China API", () => {
+			const zaiApiKey = "test-zai-api-key"
+			new ZAiHandler({ zaiApiKey, zaiApiLine: "china_api" })
+			expect(OpenAI).toHaveBeenCalledWith(expect.objectContaining({ apiKey: zaiApiKey }))
+		})
+
+		it("should return China default model when no model is specified", () => {
+			const model = handler.getModel()
+			expect(model.id).toBe(mainlandZAiDefaultModelId)
+			expect(model.info).toEqual(mainlandZAiModels[mainlandZAiDefaultModelId])
+		})
+
+		it("should return specified China model when valid model is provided", () => {
+			const testModelId: MainlandZAiModelId = "glm-4.5-air"
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: testModelId,
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "china_api",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(mainlandZAiModels[testModelId])
 		})
 	})
 

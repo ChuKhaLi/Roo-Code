@@ -110,6 +110,7 @@ export interface ExtensionMessage {
 		| "mcpExecutionStatus"
 		| "vsCodeSetting"
 		| "authenticatedUser"
+		| "condenseTaskContextStarted"
 		| "condenseTaskContextResponse"
 		| "singleRouterModelFetchResponse"
 		| "rooCreditBalance"
@@ -285,6 +286,7 @@ export type ExtensionState = Pick<
 	| "openRouterImageGenerationSelectedModel"
 	| "includeTaskHistoryInEnhance"
 	| "reasoningBlockCollapsed"
+	| "enterBehavior"
 	| "includeCurrentTime"
 	| "includeCurrentCost"
 	| "maxGitStatusFiles"
@@ -369,7 +371,6 @@ export interface ClineSayTool {
 		| "fetchInstructions"
 		| "listFilesTopLevel"
 		| "listFilesRecursive"
-		| "listCodeDefinitionNames"
 		| "searchFiles"
 		| "switchMode"
 		| "newTask"
@@ -431,6 +432,7 @@ export const browserActions = [
 	"scroll_up",
 	"resize",
 	"close",
+	"screenshot",
 ] as const
 
 export type BrowserAction = (typeof browserActions)[number]

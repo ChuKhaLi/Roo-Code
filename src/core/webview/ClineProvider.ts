@@ -33,10 +33,10 @@ import {
 	type CloudOrganizationMembership,
 	type CreateTaskOptions,
 	type TokenUsage,
+	type ToolUsage,
 	RooCodeEventName,
 	requestyDefaultModelId,
 	openRouterDefaultModelId,
-	glamaDefaultModelId,
 	DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT,
 	DEFAULT_WRITE_DELAY_MS,
 	ORGANIZATION_ALLOW_ALL,
@@ -205,7 +205,7 @@ export class ClineProvider
 
 			// Create named listener functions so we can remove them later.
 			const onTaskStarted = () => this.emit(RooCodeEventName.TaskStarted, instance.taskId)
-			const onTaskCompleted = (taskId: string, tokenUsage: any, toolUsage: any) =>
+			const onTaskCompleted = (taskId: string, tokenUsage: TokenUsage, toolUsage: ToolUsage) =>
 				this.emit(RooCodeEventName.TaskCompleted, taskId, tokenUsage, toolUsage)
 			const onTaskAborted = async () => {
 				this.emit(RooCodeEventName.TaskAborted, instance.taskId)
@@ -246,8 +246,8 @@ export class ClineProvider
 			const onTaskUnpaused = (taskId: string) => this.emit(RooCodeEventName.TaskUnpaused, taskId)
 			const onTaskSpawned = (taskId: string) => this.emit(RooCodeEventName.TaskSpawned, taskId)
 			const onTaskUserMessage = (taskId: string) => this.emit(RooCodeEventName.TaskUserMessage, taskId)
-			const onTaskTokenUsageUpdated = (taskId: string, tokenUsage: TokenUsage) =>
-				this.emit(RooCodeEventName.TaskTokenUsageUpdated, taskId, tokenUsage)
+			const onTaskTokenUsageUpdated = (taskId: string, tokenUsage: TokenUsage, toolUsage: ToolUsage) =>
+				this.emit(RooCodeEventName.TaskTokenUsageUpdated, taskId, tokenUsage, toolUsage)
 
 			// Attach the listeners.
 			instance.on(RooCodeEventName.TaskStarted, onTaskStarted)
@@ -1525,39 +1525,6 @@ export class ClineProvider
 		await this.upsertProviderProfile(currentApiConfigName, newConfiguration)
 	}
 
-	// Glama
-
-	async handleGlamaCallback(code: string) {
-		let apiKey: string
-
-		try {
-			const response = await axios.post("https://glama.ai/api/gateway/v1/auth/exchange-code", { code })
-
-			if (response.data && response.data.apiKey) {
-				apiKey = response.data.apiKey
-			} else {
-				throw new Error("Invalid response from Glama API")
-			}
-		} catch (error) {
-			this.log(
-				`Error exchanging code for API key: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
-			)
-
-			throw error
-		}
-
-		const { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
-
-		const newConfiguration: ProviderSettings = {
-			...apiConfiguration,
-			apiProvider: "glama",
-			glamaApiKey: apiKey,
-			glamaModelId: apiConfiguration?.glamaModelId || glamaDefaultModelId,
-		}
-
-		await this.upsertProviderProfile(currentApiConfigName, newConfiguration)
-	}
-
 	// Requesty
 
 	async handleRequestyCallback(code: string, baseUrl: string | null) {
@@ -1905,6 +1872,7 @@ export class ClineProvider
 			terminalCompressProgressBar,
 			historyPreviewCollapsed,
 			reasoningBlockCollapsed,
+			enterBehavior,
 			cloudUserInfo,
 			cloudIsAuthenticated,
 			sharingEnabled,
@@ -2058,6 +2026,7 @@ export class ClineProvider
 			hasSystemPromptOverride,
 			historyPreviewCollapsed: historyPreviewCollapsed ?? false,
 			reasoningBlockCollapsed: reasoningBlockCollapsed ?? true,
+			enterBehavior: enterBehavior ?? "send",
 			cloudUserInfo,
 			cloudIsAuthenticated: cloudIsAuthenticated ?? false,
 			cloudOrganizations,
@@ -2287,6 +2256,7 @@ export class ClineProvider
 			maxConcurrentFileReads: stateValues.maxConcurrentFileReads ?? 5,
 			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,
 			reasoningBlockCollapsed: stateValues.reasoningBlockCollapsed ?? true,
+			enterBehavior: stateValues.enterBehavior ?? "send",
 			cloudUserInfo,
 			cloudIsAuthenticated,
 			sharingEnabled,

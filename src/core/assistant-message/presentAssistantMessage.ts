@@ -9,6 +9,7 @@ import { defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import type { ToolParamName, ToolResponse, ToolUse, McpToolUse } from "../../shared/tools"
 import { Package } from "../../shared/package"
 import { t } from "../../i18n"
+import { AskIgnoredError } from "../task/AskIgnoredError"
 
 import { fetchInstructionsTool } from "../tools/FetchInstructionsTool"
 import { listFilesTool } from "../tools/ListFilesTool"
@@ -18,8 +19,8 @@ import { shouldUseSingleFileRead, TOOL_PROTOCOL } from "@roo-code/types"
 import { writeToFileTool } from "../tools/WriteToFileTool"
 import { applyDiffTool } from "../tools/MultiApplyDiffTool"
 import { searchAndReplaceTool } from "../tools/SearchAndReplaceTool"
+import { searchReplaceTool } from "../tools/SearchReplaceTool"
 import { applyPatchTool } from "../tools/ApplyPatchTool"
-import { listCodeDefinitionNamesTool } from "../tools/ListCodeDefinitionNamesTool"
 import { searchFilesTool } from "../tools/SearchFilesTool"
 import { browserActionTool } from "../tools/BrowserActionTool"
 import { executeCommandTool } from "../tools/ExecuteCommandTool"
@@ -40,8 +41,6 @@ import { Task } from "../task/Task"
 import { codebaseSearchTool } from "../tools/CodebaseSearchTool"
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { applyDiffTool as applyDiffToolClass } from "../tools/ApplyDiffTool"
-import { isNativeProtocol } from "@roo-code/types"
-import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -224,6 +223,11 @@ export async function presentAssistantMessage(cline: Task) {
 			}
 
 			const handleError = async (action: string, error: Error) => {
+				// Silently ignore AskIgnoredError - this is an internal control flow
+				// signal, not an actual error. It occurs when a newer ask supersedes an older one.
+				if (error instanceof AskIgnoredError) {
+					return
+				}
 				const errorString = `Error ${action}: ${JSON.stringify(serializeError(error))}`
 				await cline.say(
 					"error",
@@ -385,11 +389,11 @@ export async function presentAssistantMessage(cline: Task) {
 						}]`
 					case "search_and_replace":
 						return `[${block.name} for '${block.params.path}']`
+					case "search_replace":
+						return `[${block.name} for '${block.params.file_path}']`
 					case "apply_patch":
 						return `[${block.name}]`
 					case "list_files":
-						return `[${block.name} for '${block.params.path}']`
-					case "list_code_definition_names":
 						return `[${block.name} for '${block.params.path}']`
 					case "browser_action":
 						return `[${block.name} for '${block.params.action}']`
@@ -610,6 +614,11 @@ export async function presentAssistantMessage(cline: Task) {
 			}
 
 			const handleError = async (action: string, error: Error) => {
+				// Silently ignore AskIgnoredError - this is an internal control flow
+				// signal, not an actual error. It occurs when a newer ask supersedes an older one.
+				if (error instanceof AskIgnoredError) {
+					return
+				}
 				const errorString = `Error ${action}: ${JSON.stringify(serializeError(error))}`
 
 				await cline.say(
@@ -835,6 +844,16 @@ export async function presentAssistantMessage(cline: Task) {
 						toolProtocol,
 					})
 					break
+				case "search_replace":
+					await checkpointSaveAndMark(cline)
+					await searchReplaceTool.handle(cline, block as ToolUse<"search_replace">, {
+						askApproval,
+						handleError,
+						pushToolResult,
+						removeClosingTag,
+						toolProtocol,
+					})
+					break
 				case "apply_patch":
 					await checkpointSaveAndMark(cline)
 					await applyPatchTool.handle(cline, block as ToolUse<"apply_patch">, {
@@ -890,15 +909,6 @@ export async function presentAssistantMessage(cline: Task) {
 					break
 				case "codebase_search":
 					await codebaseSearchTool.handle(cline, block as ToolUse<"codebase_search">, {
-						askApproval,
-						handleError,
-						pushToolResult,
-						removeClosingTag,
-						toolProtocol,
-					})
-					break
-				case "list_code_definition_names":
-					await listCodeDefinitionNamesTool.handle(cline, block as ToolUse<"list_code_definition_names">, {
 						askApproval,
 						handleError,
 						pushToolResult,
